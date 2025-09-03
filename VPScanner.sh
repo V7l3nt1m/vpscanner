@@ -51,7 +51,7 @@ done
 # If no wordlist provided
 if [ -z "$wordlist" ]; then
     echo
-    echo "Usage: ./VPScanner.sh <wordlist>"
+    echo "Usage:sudo ./VPScanner.sh <wordlist>"
     echo "Add --skip-ports flag to skip port scanning"
     exit 1
 fi
@@ -130,20 +130,29 @@ check_connection
 echo "================================================================================"
 echo "[*] Checking alive subdomains with httpx..."
 cat final_subdomains.txt | httpx -t 50 -sc -title -tech-detect -web-server -ip -cdn > subdomains_alive.txt
-cat subdomains_alive.txt | cut -d ' ' -f1 | cut -d "/" -f3 > subSemHttpx.txt
+cat subdomains_alive.txt | cut -d ' ' -f1 | cut -d "/" -f3 > subNoHttp.txt
 
-echo "[+] Alive subdomains saved in: subdomains_alive.txt and subSemHttpx.txt"
+echo "[+] Alive subdomains saved in: subdomains_alive.txt and subNoHttp.txt"
+
+echo
+echo "================================================================================"
 
 ## Capture screenshots
 echo "[*] Capturing screenshots with gowitness..."
-cat subdomains_alive.txt | cut -d ' ' -f1 > subComHTTP.txt
-gowitness scan --screenshot-fullpage file -f subComHTTP.txt 
+cat subdomains_alive.txt | cut -d ' ' -f1 > subwithHTTP.txt
+gowitness scan --screenshot-fullpage file -f subwithHTTP.txt 
 echo "[+] Screenshots saved in screenshots/"
+
+echo
+echo "================================================================================"
 
 ## Subdomain takeover check (basic 404 + CNAME extraction)
 echo "[*] Extracting 404 subdomains for potential takeover..."
 grep "404" subdomains_alive.txt > subdomains404.txt
-cut -d ' ' -f1 subdomains404.txt | cut -d "/" -f3 > subSemHttpx404.txt
+cut -d ' ' -f1 subdomains404.txt | cut -d "/" -f3 > subNoHttp404.txt
+
+echo
+echo "================================================================================"
 
 echo "[*] Extracting CNAMEs for 404 subdomains..."
 while read sub; do
@@ -151,23 +160,34 @@ while read sub; do
     if [ -n "$cname" ]; then
         echo "$sub -> $cname"
     fi
-done < subSemHttpx404.txt > cnames_detected404.txt
+done < subNoHttp404.txt > cnames_detected404.txt
 echo "[+] CNAMEs saved in: cnames_detected404.txt"
+
+echo
+echo "================================================================================"
 
 ## Wayback URLs
 echo "[*] Collecting Wayback URLs with gau..."
-gau < subSemHttpx.txt | tee allwaybacksurls.txt
+gau < subNoHttp.txt | tee allwaybacksurls.txt
 uro < allwaybacksurls.txt > gauUrls.txt
+
+echo
+echo "================================================================================"
 
 ## Sensitive URLs
 echo "[*] Searching for sensitive URLs..."
 mkdir -p resultsFiles
 touch resultsFiles/sensitiveUrls.txt
 
-rg -i '(phpinfo|debug|admin|config|setup|install|dump|sql|backup|\.git|\.env|\.svn|passwd|token|key|secret|private|example|docs|sample|shell|console|upload|temp|log|logs|db)[^/]*\.(php|jsp|asp|aspx|cgi|json|xml|log|sql|txt|env|bak|zip|tar|gz|conf|pem|crt|key|p12|dist|pfx|csv|yml|ini|sh)?(\?|$)' allwaybacksurls.txt \
+
+
+rg -i '(phpinfo|debug|admin|config|setup|install|dump|sql|backup|\.git|\.env|\.svn|passwd|token|key|secret|private|example|docs|sample|shell|console|upload|temp|log|logs|db)[^/]*\.(php|jsp|asp|aspx|cgi|json|dist|xml|log|sql|txt|env|bak|zip|tar|gz|conf|pem|crt|key|p12|dist|pfx|csv|yml|ini|sh)?(\?|$)' allwaybacksurls.txt \
   | rg -iv '\.(jpg|jpeg|png|gif|svg|css|woff|ico|mp4|webp|ttf|eot)(\?|$)' \
   | anew resultsFiles/sensitiveUrls.txt
 echo "[+] Sensitive URLs saved in resultsFiles/sensitiveUrls.txt"
+
+echo
+echo "================================================================================"
 
 ## GF patterns
 
@@ -179,13 +199,20 @@ for pattern in $(ls ~/.gf | sed 's/\.json$//'); do
     gf "$pattern" < "gauUrls.txt" | sort -u > "$OUTPUT_DIR/$pattern/urls.txt"
 done
 
+echo "[*] GF finished"
+
+echo
+echo "================================================================================"
+
+
 ## Port scanning
 if [ "$skip_ports" = false ]; then
+    echo
+    echo "================================================================================"
     echo "[*] Scanning open ports with naabu + nmap..."
-    sudo naabu -list subSemHttpx.txt -top-ports 1000 -nmap-cli 'nmap -sV -Pn -T4 -o nmapResults.txt' -o naabuPortScan.txt
+    naabu -list subNoHttp.txt -top-ports 1000 -nmap-cli 'nmap -sV -Pn -T4 -o nmapResults.txt' -o naabuPortScan.txt
+    echo
     echo "[+] Port scan finished"
-else
-    echo "[*] Port scanning skipped (--skip-ports enabled)"
 fi
 
 check_connection
@@ -196,19 +223,21 @@ RED=$(tput setaf 1)
 YELLOW=$(tput setaf 3)
 RESET=$(tput sgr0)
 
+echo
 echo "================================================================================"
 echo "FINAL RESULTS"
 echo
-echo "${GREEN}[*] Unique subdomains:${RESET} $(wc -l < final_subdomains.txt)"
 echo "${GREEN}[*] Alive subdomains:${RESET} $(wc -l < subdomains_alive.txt)"
 echo "${RED}[*] Subdomains with 404:${RESET} $(wc -l < subdomains404.txt)"
 echo "${YELLOW}[*] CNAMEs from 404:${RESET} $(wc -l < cnames_detected404.txt)"
 echo "${YELLOW}[*] Wayback URLs:${RESET} $(wc -l < allwaybacksurls.txt)"
-echo "${YELLOW}[*] Filtered URLs (uro):${RESET} $(wc -l < gauUrls.txt)"
+echo "${YELLOW}[*] Filtered URLs (gau):${RESET} $(wc -l < gauUrls.txt)"
 echo "${RED}[*] Sensitive URLs detected:${RESET} $(wc -l < resultsFiles/sensitiveUrls.txt)"
+
 if [ "$skip_ports" = false ]; then
     echo "${YELLOW}[*] Unique open ports detected:${RESET} $(cut -d ":" -f2 naabuPortScan.txt | sort -u | wc -l)"
 fi
+
 echo
 echo "================================================================================"
 echo "[*] VPScanner Finished!"
