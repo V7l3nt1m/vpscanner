@@ -156,8 +156,8 @@ echo "[+] CNAMEs saved in: cnames_detected404.txt"
 
 ## Wayback URLs
 echo "[*] Collecting Wayback URLs with gau..."
-gau < subOutHttpx.txt | tee allwaybacksurls.txt
-uro < params1.txt > gauUrls.txt
+gau < subSemHttpx.txt | tee allwaybacksurls.txt
+uro < allwaybacksurls.txt > gauUrls.txt
 
 ## Sensitive URLs
 echo "[*] Searching for sensitive URLs..."
