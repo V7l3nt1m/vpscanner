@@ -71,8 +71,10 @@ NOTES:
 
 CONTACT:
 --------
-Author: <Your Name or Handle>
-GitHub: <Your GitHub URL>
+Author: Valentim Prado (v7l3nt1m)
+GitHub: https://github.com/V7l3nt1m/vpscanner
+Hackerone: https://hackerone.com/v7l3nt1m
+Linkdin: https://www.linkedin.com/in/valentim-prado-25ab6124b/
 
 LICENSE:
 --------
