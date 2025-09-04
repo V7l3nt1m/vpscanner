@@ -2,17 +2,32 @@
 VPScanner - Automated Recon Script
 ========================================================
 
+CONTACT:
+--------
+[![License](https://img.shields.io/badge/License-Educational-lightgrey.svg)](LICENSE) 
+[![HackerOne](https://img.shields.io/badge/HackerOne-v7l3nt1m-blue)](https://hackerone.com/v7l3nt1m) 
+[![GitHub](https://img.shields.io/badge/GitHub-V7l3nt1m-green)](https://github.com/V7l3nt1m/vpscanner) 
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Valentim_Prado-blue)](https://www.linkedin.com/in/valentim-prado-25ab6124b/)
+
 DESCRIPTION:
 -------------
 VPScanner is a fully automated reconnaissance script designed for bug bounty hunters and penetration testers. 
+
 It performs:
-  - Subdomain enumeration
-  - Alive subdomain detection
-  - Screenshots of subdomains
-  - Wayback URL collection and filtering
-  - Sensitive file/URL detection
-  - GF pattern filtering
-  - Optional port scanning
+
+- Subdomain enumeration (subfinder, sublist3r, assetfinder, findomain, amass)  
+- Alive subdomain detection (httpx)  
+- Screenshots of alive subdomains (gowitness)  
+- Wayback URL collection & filtering (gau, uro)  
+- Sensitive file/URL detection (ripgrep)  
+- GF pattern filtering (gf)  
+- Hakrawler fuzzing for additional URLs  
+- Optional port scanning (naabu + nmap)  
+
+✅ Automatic retries for failed commands  
+✅ Internet connectivity checks before each step  
+✅ Parallel execution for faster processing  
+✅ Timestamped, organized outputs  
 
 REQUIREMENTS:
 -------------
@@ -31,6 +46,7 @@ Make sure the following tools are installed on your system:
 - gowitness
 - naabu
 - nmap
+- hakrawler
 
 USAGE:
 ------
@@ -68,19 +84,5 @@ NOTES:
 - Recommended to run on Linux or WSL.
 - Internet connection is required for most tools to work.
 - Script includes automatic retries for subdomain enumeration tools if they fail.
-
-CONTACT:
---------
-Author: Valentim Prado (v7l3nt1m)
-
-GitHub: https://github.com/V7l3nt1m/vpscanner
-
-Hackerone: https://hackerone.com/v7l3nt1m
-
-Linkdin: https://www.linkedin.com/in/valentim-prado-25ab6124b/
-
-LICENSE:
---------
-This script is provided as-is for educational purposes. Use responsibly and ethically.
 
 ========================================================
