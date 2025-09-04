@@ -17,7 +17,7 @@
 #
 # REQUIREMENTS (install before running):
 #   subfinder, sublist3r, assetfinder, amass, findomain
-#   httpx, gau, uro, ripgrep (rg), gf, gowitness, naabu, nmap
+#   httpx, gau, uro, ripgrep (rg), gf, gowitness, naabu, nmap, hakrawler
 #
 # USAGE:
 #   ./VPScanner.sh <wordlist>
@@ -38,7 +38,7 @@ for arg in "$@"; do
 done
 
 # Check if required tools are installed
-dependencies=(subfinder sublist3r assetfinder amass findomain)
+dependencies=(subfinder sublist3r assetfinder amass findomain naabu nmap gau uro gf rg gowitness httpx hakrawler)
 for cmd in "${dependencies[@]}"; do
     if ! command -v "$cmd" &> /dev/null; then
         echo "[!] $cmd is not installed. Please install it before running this script."
@@ -89,7 +89,7 @@ echo "[*] Running Sublist3r, Assetfinder, and Findomain in parallel..."
 
 pids=()
 
-# Run sublist3r, assetfinder and findomain in parallel per domain
+# Run sublist3r, assetfinder, findomain and crt in parallel per domain
 while read -r domain; do
     seconds=$(date +%s)
     echo "[*] Processing domain: $domain"
@@ -97,6 +97,12 @@ while read -r domain; do
     
     while ! sublist3r -d "$domain" -o "sublister_results_$seconds.txt"; do
         echo "[!] Sublist3r failed for $domain. Retrying..."
+        check_connection
+    done &
+    pids+=($!)
+
+    while ! curl https://crt.sh/\?q=$domain\&output=json | jq -r '.[].name_value' | sed 's/\*\.//g' | sort -u > "crt_$seconds.txt"; do
+        echo "[!] CRT.SH failed for $domain. Retrying..."
         check_connection
     done &
     pids+=($!)
@@ -122,7 +128,7 @@ for pid in "${pids[@]}"; do wait "$pid"; done
 
 echo "================================================================================"
 echo "[*] Merging results and removing duplicates..."
-cat subfinder_results.txt sublister_results_*.txt assetfinder_results_*.txt findomains_results_*.txt | sort -u > final_subdomains.txt
+cat subfinder_results.txt sublister_results_*.txt assetfinder_results_*.txt findomains_results_*.txt crt_*.txt | sort -u > final_subdomains.txt
 
 echo "[*] Found $(wc -l < final_subdomains.txt) unique subdomains"
 check_connection
@@ -168,26 +174,42 @@ echo "==========================================================================
 
 ## Wayback URLs
 echo "[*] Collecting Wayback URLs with gau..."
-gau < subNoHttp.txt | tee allwaybacksurls.txt
+gau < subNoHttp.txt > allwaybacksurls.txt
 uro < allwaybacksurls.txt > gauUrls.txt
 
 echo
 echo "================================================================================"
 
-## Sensitive URLs
+## Sensitive URLs with Gau
 echo "[*] Searching for sensitive URLs..."
 mkdir -p resultsFiles
 touch resultsFiles/sensitiveUrls.txt
 
+echo "[*] Extracting files..."
+rg -i '\.(php|js|jsp|asp|aspx|cgi|json|xml|log|sql|txt|env|bak|zip|tar|gz|tgz|conf|pem|crt|key|p12|pfx|csv|yml|ini|sh|db|sqlite|mdb|accdb)(\?|$)' allwaybacksurls.txt > extractedFilesExtensionWayback.txt
 
-
-rg -i '(phpinfo|debug|admin|config|setup|install|dump|sql|backup|\.git|\.env|\.svn|passwd|token|key|secret|private|example|docs|sample|shell|console|upload|temp|log|logs|db)[^/]*\.(php|jsp|asp|aspx|cgi|json|dist|xml|log|sql|txt|env|bak|zip|tar|gz|conf|pem|crt|key|p12|dist|pfx|csv|yml|ini|sh)?(\?|$)' allwaybacksurls.txt \
+rg -i '(phpinfo|debug|admin|config|setup|install|dump|sql|backup|\.git|\.env|\.svn|passwd|token|apikey|secret|private|id_rsa|ssh|example|docs|sample|shell|console|upload|temp|log|logs|db|database|error)[^/]*\.(php|jsp|asp|aspx|cgi|json|dist|xml|log|sql|js|txt|env|bak|zip|tar|gz|tgz|conf|pem|crt|key|p12|pfx|csv|yml|ini|sh|db|sqlite|mdb|accdb)?(\?|$)' allwaybacksurls.txt \
   | rg -iv '\.(jpg|jpeg|png|gif|svg|css|woff|ico|mp4|webp|ttf|eot)(\?|$)' \
   | anew resultsFiles/sensitiveUrls.txt
 echo "[+] Sensitive URLs saved in resultsFiles/sensitiveUrls.txt"
 
 echo
 echo "================================================================================"
+
+## URLs with hakrawler
+echo "[*] Collecting URLs with hakrawler..."
+cat subwithHTTP.txt | hakrawler -i -u -subs > urlshakrawler.txt
+
+mkdir -p resultsFilesHak
+touch resultsFilesHak/sensitiveUrlsHak.txt
+
+echo "[*] Extracting files of hakrawler results..."
+rg -i '\.(php|js|jsp|asp|aspx|cgi|json|xml|log|sql|txt|env|bak|zip|tar|gz|tgz|conf|pem|crt|key|p12|pfx|csv|yml|ini|sh|db|sqlite|mdb|accdb)(\?|$)' urlshakrawler.txt > extractedFilesExtensionHak.txt
+
+rg -i '(phpinfo|debug|admin|config|setup|install|dump|sql|backup|\.git|\.env|\.svn|passwd|token|apikey|secret|private|id_rsa|ssh|example|docs|sample|shell|console|upload|temp|log|logs|db|database|error)[^/]*\.(php|jsp|asp|aspx|cgi|json|dist|xml|log|sql|js|txt|env|bak|zip|tar|gz|tgz|conf|pem|crt|key|p12|pfx|csv|yml|ini|sh|db|sqlite|mdb|accdb)?(\?|$)' urlshakrawler.txt \
+  | rg -iv '\.(jpg|jpeg|png|gif|svg|css|woff|ico|mp4|webp|ttf|eot)(\?|$)' \
+  | anew resultsFilesHak/sensitiveUrlsHak.txt
+echo "[+] Sensitive URLs saved in resultsFilesHak/sensitiveUrlsHak.txt"
 
 ## GF patterns
 
@@ -210,9 +232,21 @@ if [ "$skip_ports" = false ]; then
     echo
     echo "================================================================================"
     echo "[*] Scanning open ports with naabu + nmap..."
-    naabu -list subNoHttp.txt -top-ports 1000 -nmap-cli 'nmap -sV -Pn -T4 -o nmapResults.txt' -o naabuPortScan.txt
+     naabu -list subNoHttp.txt \
+    -p - \
+    -rate 1500 \
+    -retries 2 \
+    -timeout 1500 \
+    -verify \
+    -silent \
+    -o naabuPortScan.txt
+
+    cut -d ':' -f1 naabuPortScan.txt | sort -u > hosts.txt
+    ports=$(cut -d ':' -f2 naabuPortScan.txt | sort -u | tr '\n' ',' | sed 's/,$//')
+
+    nmap -sV -sC -T4 -iL hosts.txt -p$ports -oA focusedscan.txt
     echo
-    echo "[+] Port scan finished"
+    echo "[+] Port scan finished, saved in focusedscan.txt and naabuPortScan.txt"
 fi
 
 check_connection
@@ -233,6 +267,9 @@ echo "${YELLOW}[*] CNAMEs from 404:${RESET} $(wc -l < cnames_detected404.txt)"
 echo "${YELLOW}[*] Wayback URLs:${RESET} $(wc -l < allwaybacksurls.txt)"
 echo "${YELLOW}[*] Filtered URLs (gau):${RESET} $(wc -l < gauUrls.txt)"
 echo "${RED}[*] Sensitive URLs detected:${RESET} $(wc -l < resultsFiles/sensitiveUrls.txt)"
+echo "${YELLOW}[*] Filtered files (hakrawlerau):${RESET} $(wc -l < extractedFilesExtensionHak.txt)"
+echo "${RED}[*] Sensitive files (hakrawler):${RESET} $(wc -l < resultsFilesHak/sensitiveUrlsHak.txt)"
+
 
 if [ "$skip_ports" = false ]; then
     echo "${YELLOW}[*] Unique open ports detected:${RESET} $(cut -d ":" -f2 naabuPortScan.txt | sort -u | wc -l)"
