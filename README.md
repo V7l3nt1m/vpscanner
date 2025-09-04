@@ -15,7 +15,7 @@ VPScanner is a fully automated reconnaissance script designed for bug bounty hun
 
 It performs:
 
-- Subdomain enumeration (subfinder, sublist3r, assetfinder, findomain, amass)  
+- Subdomain enumeration (subfinder, sublist3r, assetfinder, findomain, amass and crt.sh)  
 - Alive subdomain detection (httpx)  
 - Screenshots of alive subdomains (gowitness)  
 - Wayback URL collection & filtering (gau, uro)  
