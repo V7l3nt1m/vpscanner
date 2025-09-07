@@ -20,8 +20,8 @@
 #   httpx, gau, uro, ripgrep (rg), gf, gowitness, naabu, nmap, hakrawler
 #
 # USAGE:
-#   ./VPScanner.sh <wordlist>
-#   ./VPScanner.sh <wordlist> --skip-ports
+#   ./VPScanner.sh <listofdomains>
+#   ./VPScanner.sh <listofdomains> --skip-ports
 # =================================================
 
 wordlist=$1
@@ -51,8 +51,9 @@ done
 # If no wordlist provided
 if [ -z "$wordlist" ]; then
     echo
-    echo "Usage: ./VPScanner.sh <wordlist>"
+    echo "Usage: ./VPScanner.sh <listofdomains>" 
     echo "Add --skip-ports flag to skip port scanning"
+    echo "Example: ./VPScanner.sh domains.txt or ./VPScanner.sh domains.txt --skip-ports"
     exit 1
 fi
 
