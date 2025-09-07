@@ -51,14 +51,14 @@ Make sure the following tools are installed on your system:
 USAGE:
 ------
 Basic usage:
-    ./VPScanner.sh <wordlist>
+    ./VPScanner.sh <listofdomains>
 
 Skip port scanning:
-    ./VPScanner.sh <wordlist> --skip-ports
+    ./VPScanner.sh <listofdomains> --skip-ports
 
 ARGUMENTS:
 ----------
-<wordlist>      : Path to a file containing domains to enumerate
+<listofdomains>      : Path to a file containing domains to enumerate
 --skip-ports    : Optional flag to skip open port scanning
 
 OUTPUT:
