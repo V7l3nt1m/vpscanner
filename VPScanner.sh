@@ -82,7 +82,7 @@ cd "results_$data" || exit
 
 echo "================================================================================"
 echo "[*] Running Subfinder..."
-run_with_check subfinder -dL "../$wordlist" -o subfinder_results.txt & subfinder_pid=$!
+run_with_check subfinder -dL "../$wordlist" -es digitorus -o subfinder_results.txt & subfinder_pid=$!
 
 echo "================================================================================"
 echo "[*] Running Sublist3r, Assetfinder, Findomain, CRT.sh in parallel..."
