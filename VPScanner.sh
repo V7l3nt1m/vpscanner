@@ -138,7 +138,10 @@ echo "[+] CNAMEs saved in: cnames_detected404.txt"
 
 echo "================================================================================"
 echo "[*] Collecting Wayback URLs with gau..."
-run_with_check "gau < subNoHttp.txt > allwaybacksurls.txt"
+
+sed 's|^|https://|' ../$wordlist > targetWithHttp.txt
+
+run_with_check "gau < ../$wordlist > allwaybacksurls.txt"
 run_with_check "uro < allwaybacksurls.txt > gauUrls.txt"
 
 echo "================================================================================"
@@ -154,7 +157,7 @@ echo "[+] Sensitive URLs saved in resultsFiles/sensitiveUrls.txt"
 
 echo "================================================================================"
 echo "[*] Collecting URLs with hakrawler..."
-run_with_check "cat subwithHTTP.txt | hakrawler -i -u -subs > urlshakrawler.txt"
+run_with_check "cat targetWithHttp.txt | hakrawler -i -u -subs > urlshakrawler.txt"
 
 mkdir -p resultsFilesHak
 touch resultsFilesHak/sensitiveUrlsHak.txt
